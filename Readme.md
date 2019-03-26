@@ -20,5 +20,6 @@ func main () {
   cache.Set("key", "value")
   value, exists := cache.Get("key")
   count := cache.Count()
+  value, exists := cache.Delete("key")
 }
 ```

@@ -26,6 +26,25 @@ func TestGet(t *testing.T) {
 	}
 }
 
+func TestDelete(t *testing.T) {
+	cache := &Cache{
+		ttl:   time.Minute,
+		items: map[string]*Item{},
+	}
+	cache.Set("hello", "world")
+	_, exists := cache.Get("hello")
+	if !exists {
+		t.Errorf("Expected cache to return data for `hello`")
+	}
+
+	cache.Delete("hello")
+
+	_, exists = cache.Get("hello")
+	if exists {
+		t.Errorf("Expected cache to return data for `hello`")
+	}
+}
+
 func TestExpiration(t *testing.T) {
 	cache := &Cache{
 		ttl:   time.Second,
