@@ -7,13 +7,14 @@ import (
 
 // Cache is a synchronised map of items that auto-expire once stale
 type Cache struct {
-	mutex sync.RWMutex
-	ttl   time.Duration
-	items map[string]*Item
+	mutex        sync.RWMutex
+	ttl          time.Duration
+	hasTouchLife bool
+	items        map[string]*Item
 }
 
 // Set is a thread-safe way to add new items to the map
-func (cache *Cache) Set(key string, data string) {
+func (cache *Cache) Set(key string, data interface{}) {
 	cache.mutex.Lock()
 	item := &Item{data: data}
 	item.touch(cache.ttl)
@@ -22,15 +23,16 @@ func (cache *Cache) Set(key string, data string) {
 }
 
 // Get is a thread-safe way to lookup items
-// Every lookup, also touches the item, hence extending it's life
-func (cache *Cache) Get(key string) (data string, found bool) {
+func (cache *Cache) Get(key string) (data interface{}, found bool) {
 	cache.mutex.Lock()
 	item, exists := cache.items[key]
 	if !exists || item.expired() {
 		data = ""
 		found = false
 	} else {
-		item.touch(cache.ttl)
+		if cache.hasTouchLife {
+			item.touch(cache.ttl)
+		}
 		data = item.data
 		found = true
 	}
@@ -81,11 +83,17 @@ func (cache *Cache) startCleanupTimer() {
 }
 
 // NewCache is a helper to create instance of the Cache struct
-func NewCache(duration time.Duration) *Cache {
+func NewCache(config Config) *Cache {
 	cache := &Cache{
-		ttl:   duration,
-		items: map[string]*Item{},
+		ttl:          config.Duration,
+		hasTouchLife: config.HasTouchLife,
+		items:        map[string]*Item{},
 	}
 	cache.startCleanupTimer()
 	return cache
+}
+
+type Config struct {
+	Duration time.Duration
+	HasTouchLife bool // Every lookup, also touches the item, hence extending it's life
 }

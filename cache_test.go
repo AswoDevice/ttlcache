@@ -6,10 +6,7 @@ import (
 )
 
 func TestGet(t *testing.T) {
-	cache := &Cache{
-		ttl:   time.Second,
-		items: map[string]*Item{},
-	}
+	cache := NewCache(Config{Duration: time.Minute})
 
 	data, exists := cache.Get("hello")
 	if exists || data != "" {
@@ -27,34 +24,28 @@ func TestGet(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	cache := &Cache{
-		ttl:   time.Minute,
-		items: map[string]*Item{},
-	}
+	cache := NewCache(Config{Duration: time.Minute})
+
 	cache.Set("hello", "world")
-	_, exists := cache.Get("hello")
+	_, exists := cache.GetString("hello")
 	if !exists {
 		t.Errorf("Expected cache to return data for `hello`")
 	}
 
 	cache.Delete("hello")
 
-	_, exists = cache.Get("hello")
+	_, exists = cache.GetString("hello")
 	if exists {
 		t.Errorf("Expected cache to return data for `hello`")
 	}
 }
 
 func TestExpiration(t *testing.T) {
-	cache := &Cache{
-		ttl:   time.Second,
-		items: map[string]*Item{},
-	}
+	cache := NewCache(Config{Duration: time.Second, HasTouchLife: true})
 
 	cache.Set("x", "1")
 	cache.Set("y", "z")
 	cache.Set("z", "3")
-	cache.startCleanupTimer()
 
 	count := cache.Count()
 	if count != 3 {
@@ -102,5 +93,25 @@ func TestExpiration(t *testing.T) {
 	count = cache.Count()
 	if count != 0 {
 		t.Errorf("Expected cache to be empty")
+	}
+}
+
+func TestHasTouchLife(t *testing.T) {
+	cache := NewCache(Config{Duration: time.Second, HasTouchLife: false})
+
+	cache.Set("hello", "world")
+
+	<-time.After(500 * time.Millisecond)
+
+	_, exists := cache.Get("hello")
+	if !exists {
+		t.Errorf("Expected `hello` to have expired after 500ms")
+	}
+
+	<-time.After(600 * time.Millisecond)
+
+	_, exists = cache.Get("hello")
+	if exists {
+		t.Errorf("Expected `hello` to not have expired after 1100ms")
 	}
 }

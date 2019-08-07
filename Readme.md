@@ -16,9 +16,12 @@ import (
 )
 
 func main () {
-  cache := ttlcache.NewCache(time.Second)
+  cache := ttlcache.NewCache(ttlcache.Config{
+  	Duration: time.Minute * 8,
+  	HasTouchLife: true,
+  })
   cache.Set("key", "value")
-  value, exists := cache.Get("key")
+  value, exists := cache.GetString("key")
   count := cache.Count()
   cache.Delete("key")
 }
